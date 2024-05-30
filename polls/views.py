@@ -1,15 +1,32 @@
+from typing import Any
+from django.db.models.query import QuerySet
 from django.http import HttpResponse,Http404, HttpResponseRedirect
 from .models import Question, Choice
 from django.shortcuts import render,get_object_or_404
 from django.db.models import F
 from django.urls import reverse
+from django.views import generic
 
+class Indexview(generic.ListView):
+    template_name = "index.html"
+    context_object_name = "latest_question_list"
+    
+    def get_queryset(self) -> QuerySet[Any]:
+        """Return the last five published questions."""
+        return Question.objects.order_by("-pub_date")[:5]
+    
+    
 def index(request):
     latest_question_list = Question.objects.order_by("-pub_date")[:5]
     context = {
         "latest_question_list" : latest_question_list
     }
     return render(request,"index.html",context=context)
+
+class DetailView(generic.DetailView):
+    model = Question
+    template_name = "detail.html"
+
 
 def detail(request, question_id):
     try:
@@ -19,6 +36,10 @@ def detail(request, question_id):
     return render(request, "detail.html", {"question": question})
 
 
+class ResultView(generic.DetailView):
+    model = Question
+    template_name = "results.html"
+    
 def results(request, question_id):
     question = get_object_or_404(Question, pk=question_id)
     return render(request, "results.html", {"question": question})
@@ -32,7 +53,7 @@ def vote(request, question_id):
     except (KeyError, Choice.DoesNotExist):
         return render(
             request,
-            "polls/detail.html",
+            "detail.html",
             {
                 "question": question,
                 "error_message": "You didn't select a choice.",
